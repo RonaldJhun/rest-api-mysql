@@ -1,123 +1,80 @@
-import { User, UnitUser, Users} from "./user.interface";
-import bcrypt from "bcryptjs"
-import {v4 as random} from "uuid"
+import {Product, UnitProduct, Products} from "./product.interface";
+import { v4 as random} from "uuid"
 import fs from "fs"
 
-let users: Users = loadUsers()
+let products : Products = loadProducts()
 
-function loadUsers() : Users{
+function loadProducts(): Products{
     try{
-        const data = fs.readFileSync("./users.json", "utf-8")
-        return JSON.parse(data);
-    }catch (error){
+        const data = fs.readFileSync('./products.json', 'utf-8')
+        return JSON.parse(data)
+    }catch(error){
         console.log(`Error ${error}`)
         return {}
     }
 }
 
-function saveUsers(){
+function saveProducts(){
     try{
-        fs.writeFileSync("./users.json", JSON.stringify(users), "utf-8")
-        console.log(`User saved successfully`)
+        fs.writeFileSync('./products.json', JSON.stringify(products), 'utf-8')
+        console.log(`Products saved successfully`)
     }catch(error){
-        console.log(`Error: ${error}`)
+        console.log(`Error ${error}`)
     }
 }
 
-export const findAll = async (): Promise<UnitUser[]> => Object.values(users);
+export const findAll = async() : Promise<UnitProduct[]> => Object.values(products)
 
-export const findOne = async (id: string): Promise<UnitUser> => users[id];
+export const findOne = async (id : string) : Promise<UnitProduct> => products[id]
 
-export const create = async (userData: UnitUser): Promise<UnitUser | null> => {
+export const create = async (productInfo : Product) : Promise<null | UnitProduct> =>{
 
     let id = random()
 
-    let check_user = await findOne(id);
+    let product = await findOne(id)
 
-    while(check_user){
+    while(product){
         id = random()
-        check_user = await findOne(id)
+        await findOne(id)
     }
 
-    const salt = await bcrypt.genSalt(10);
-
-    const hashedPassword = await bcrypt.hash(userData.password, salt);
-
-    const user : UnitUser = {
+    products[id] = {
         id : id,
-        username : userData.username,
-        email : userData.email,
-        password : hashedPassword
+        ...productInfo
     }
 
-    users[id] = user;
+    saveProducts()
 
-    saveUsers()
-
-    return user;
+    return products[id]
 }
 
-export const findByEmail = async (user_email: string): Promise<null | UnitUser> => {
+export const update = async(id:string, updateValues : Product) : Promise <UnitProduct | null> => {
+    
+    const product = await findOne(id)
 
-    const allUsers = await findAll();
-
-    const getUser = allUsers.find(result => user_email === result.email);
-
-    if(!getUser){
-        return null;
-    }
-
-    return getUser;
-}
-
-export const compassPassword = async(email : string, supplied_password : string): Promise<null | UnitUser> => {
-
-    const user = await findByEmail(email)
-
-    const decryptPassword = await bcrypt.compare(supplied_password, user!.password)
-
-    if(!decryptPassword){
+    if(!product){
         return null
     }
 
-    return user
-
-}
-
-export const update = async(id: string, updateValues: User): Promise<UnitUser | null> => {
-
-    const userExists = await findOne(id)
-
-    if(!userExists){
-        return null
-    }
-
-    if(updateValues.password){
-        const salt = await bcrypt.genSalt(10)
-        const newPass = await bcrypt.hash(updateValues.password, salt)
-
-        updateValues.password = newPass
-    }
-
-    users[id] = {
-        ...userExists,
+    products[id] = {
+        id,
         ...updateValues
     }
 
-    saveUsers()
+    saveProducts()
 
-    return users[id]
+    return products[id]
 }
 
-export const remove = async(id: string): Promise<null | void> => {
+export const remove = async (id : string) : Promise <null | void > => {
 
-    const user = await findOne(id)
+    const product = await findOne(id)
 
-    if(!user){
+    if(!product){
         return null
     }
 
-    delete users[id]
+    delete products[id]
 
-    saveUsers()
+    saveProducts()
 }
